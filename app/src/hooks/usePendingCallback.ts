@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { Alert } from 'react-native';
+import { errorMessage } from '@/api/client';
 import { cancelCallback, describeCallback, type PendingCallback } from '@/services/calls/callback';
 import { loadPendingCallback } from '@/services/calls/callbackStore';
 
@@ -30,8 +32,12 @@ export function usePendingCallback(timeZone: string) {
   }, [record]);
 
   const cancel = useCallback(async () => {
-    await cancelCallback();
-    setRecord(null);
+    try {
+      await cancelCallback();
+      setRecord(null);
+    } catch (e) {
+      Alert.alert('Could not cancel call back', errorMessage(e));
+    }
   }, []);
 
   return { callback: describeCallback(record, timeZone, now) ? record : null, described: describeCallback(record, timeZone, now), cancel, refresh };

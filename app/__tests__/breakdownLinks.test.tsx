@@ -136,6 +136,32 @@ describe('the Report', () => {
     await press(tree, 'range-nutrient-vitaminC');
     expect(nav.navigate).toHaveBeenLastCalledWith('NutrientBreakdown', { nutrient: 'vitaminC', from: '2026-10-12', to: '2026-10-18', origin: 'report' });
   });
+
+  it.each([
+    ['day', '2026-10-17', '2026-10-17'],
+    ['week', '2026-10-12', '2026-10-18'],
+    ['month', '2026-10-01', '2026-10-31'],
+    ['year', '2026-01-01', '2026-12-31'],
+    ['custom', '2026-10-12', '2026-10-17'],
+  ])('opens the selected %s period, including its full calendar bounds', async (period, from, to) => {
+    (useRangeReport as jest.Mock).mockImplementation((start: string, end: string) => ({
+      report: { ...range, range: { from: start, to: end, through: end > '2026-10-17' ? '2026-10-17' : end } },
+      hidden: false, locked: false, loading: false, error: null, reload: jest.fn(),
+    }));
+    const tree = await render(<ReportScreen />);
+    await press(tree, `report-period-${period}`);
+    expect(useRangeReport).toHaveBeenLastCalledWith(from, to);
+    await press(tree, 'range-nutrient-protein');
+    expect(nav.navigate).toHaveBeenLastCalledWith('NutrientBreakdown', { nutrient: 'protein', from, to, origin: 'report' });
+  });
+
+  it('does not expose a nutrient row or breakdown link when numbers are hidden', async () => {
+    (useHealth as jest.Mock).mockReturnValue({ mode: 'personalised', numbersHidden: true, status: 'ready', revision: 0 });
+    (useRangeReport as jest.Mock).mockReturnValue({ report: { ...range, display: { numbersHidden: true }, nutrients: [] }, hidden: true, locked: false, loading: false, error: null, reload: jest.fn() });
+    const tree = await render(<ReportScreen />);
+    expect(byId(tree, 'range-nutrient-protein')).toHaveLength(0);
+    expect(nav.navigate).not.toHaveBeenCalled();
+  });
 });
 
 describe('a nutrient\'s detail screen', () => {

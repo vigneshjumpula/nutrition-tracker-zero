@@ -90,14 +90,15 @@ Errors look like `{"error": {"code", "message"}}`.
 | ‡ `GET/POST /me/weights` · `DELETE /me/weights/:date` | Weigh-ins; a weight that moves the weight by 3% or 2 kg makes a new target set |
 | ‡ `GET /me/export` · `DELETE /me/health-data` · `DELETE /me` | Everything stored about the health profile / erase exactly that / delete the whole profile |
 | ‡ `GET /reports/range?from&to` | Inclusive nutrient totals and averages per logged day for any date range; includes all stored nutrients, excludes skipped days, respects hidden-number settings |
+| ‡ `GET /reports/breakdown?from&to&nutrient` | Logged foods contributing to one nutrient, with per-item amounts, total and missing-value counts; up to 5,000 items, respects hidden-number settings |
 | ‡ `GET /reports/weekly?start&weeks` | The weekly view: coverage, insights, energy, nutrients, the Nutrient mix, the weight line, eight weeks of history |
 | † `POST /calls/start {kind}` | Records the call; returns `{callId, publicKey, assistant}` (the only response carrying the key) |
 | † `POST /calls/:id/started` · `POST /calls/:id/failed` | Link the Vapi call id / record a client-side failure |
 | † `GET /calls/latest` | Last call result |
 | † `GET /days/:date` · `GET /days?from&to` | A day with per-item nutrients and totals / per-day totals (≤ 62 days); each carries the person's own mark on the day |
-| † `PUT/DELETE /days/:date/status` | Mark a day `complete`, `partial` (looks incomplete) or `skip` (leave it out of the reports), or clear it |
+| † `PUT/DELETE /days/:date/status` | When day completion is enabled, set/clear `complete`, `partial` or `skip`; currently returns 409 `day_marking_off` |
 | † `POST /days/:date/items` · `PATCH/DELETE /items/:id` | Manual add (optionally onto a no_list call) / edit / delete |
-| `GET /uncached` | Unknown foods (with "did you mean") and missing unit conversions, across all users |
+| `GET /uncached` | Global unknown foods and missing unit conversions; optional `X-User-Id` adds `mine` (newest first) and `myItemCount` on shared entries |
 | `GET/POST /foods` · `GET/PUT /foods/:id` | Shared foods; writes return `resolvedCount` and any `warnings`. Impossible values (sugars over carbohydrate, …) are refused with 400 `invalid_nutrients`; a food records its `source` and `reviewedAt` |
 | `POST /foods/check` | The editor's dry run: the same checks as a save, nothing written |
 | † `GET /foods/gaps` | Foods eaten in the last four weeks that lack values the weekly view needs, most energy first |
@@ -107,6 +108,22 @@ Errors look like `{"error": {"code", "message"}}`.
 | `POST /vapi/webhook/:token` | Vapi `tool-calls` and `end-of-call-report` |
 
 ---
+
+## Current feature switches
+
+`FEATURES.dayCompletion` in `worker/src/domain/features.ts` is currently **false**; the app shares that switch through
+`app/src/config/features.ts`. The complete/incomplete/skip controls and voice question are hidden. Stored day marks are preserved
+but ignored by daily and report reads, including range totals and breakdowns. The weekly engine's automatic data-quality rules
+still apply. References below to manual day marks describe the behavior when this switch is enabled. Restore it by setting it
+to `true`, rebuilding both apps and redeploying the Worker; no database migration is needed.
+
+Tap a nutrient on Today or Report to see the logged foods contributing to its total. Report periods include day, week, month,
+year and custom dates, with **By day / By food** grouping over spans. Unknown contributions remain unknown; hidden-number mode
+does not reveal amounts. Pending separates **My pending items** from **Global pending items**; the tab badge counts your own items.
+
+During a voice call, ask “call me again in 20 minutes” or specify a local clock time. The phone schedules one callback at a time,
+with Cancel on Today. See [Voice providers](docs/VOICE_PROVIDERS.md#call-back-requests) and
+[reminder delivery](docs/REMINDER_DELIVERY.md#requested-call-backs-call-later) for platform behavior and validation.
 
 ## Personal targets, the weekly report and privacy
 

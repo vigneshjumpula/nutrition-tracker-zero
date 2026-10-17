@@ -1,5 +1,33 @@
 # iOS flow audit — 16 October 2026
 
+## Cloud follow-up — 17 October 2026
+
+The original simulator results below are historical. The current cloud machine is Linux with no Xcode or Apple simulator;
+the callback Swift changes and the fixes below still require a signed iOS rebuild and device validation.
+
+- Added a Done accessory to iOS decimal, numeric and number-pad inputs used by quantities, unit conversions, weights, birth year,
+  activity and custom targets. Done dismisses the keyboard without saving or changing the value. Shared fields can grow vertically
+  with larger text instead of forcing a fixed height. Automated tests check distinct accessories and dismissal behavior.
+- Failed notification-permission reads no longer promise a callback. A failed native cancellation preserves the pending record
+  and Today card, shows an error and permits retry. Switching daily calls off retries cancellation before updating its cached state.
+- The callback time announcement and Cancel action are separate accessibility elements so VoiceOver can reach Cancel.
+- Report navigation is covered for day, week, month, year and custom bounds, weekly/four-week nutrient links, and hidden numbers.
+  Existing breakdown tests cover grouping, edit/delete refreshes and missing values. This is automated coverage, not a device pass.
+- The registration fields already use username/new-password content types and disable capitalization/autocorrection. Apple's
+  password suggestion is expected platform behavior; it has not been disabled without evidence of a defect.
+- Today's scroll container already reserves the FAB height plus bottom spacing. Whether the daily toggle is obscured on a real
+  iOS viewport remains a manual check; a static padding check does not establish the layout works on every screen size.
+
+Pending manual pass after rebuilding: turn off the simulator hardware keyboard and edit/save each numeric form; exercise password
+autofill and visibility; scroll Today to its end; check callback replacement/cancellation, cold notification taps and reboot;
+then test Foods, settings, personal and custom targets, permissions denied, dark mode, large Dynamic Type, compact iPhone/iPad
+layouts, back gestures, refresh, share/export and the Report breakdown paths. Use disposable accounts against a local Worker and
+restore any existing ignored configuration afterwards. Physical-phone audio/lock-screen checks remain separate.
+
+See [current completion status](../REMAINING_WORK_2026-10-17.md) for the latest validation and deployment blockers.
+
+## Original simulator audit
+
 Built and ran the React Native app on iPhone 17 Pro / iOS 26.5. Also ran it on iPhone 18 Pro / iOS 27.0 to verify startup and a failing profile request. Existing report and native iOS workspace changes were preserved.
 
 Tests used a separate local Worker database at `/tmp/ntz-ios-test-db` and disposable accounts. No production data was created or modified. The original app configuration was restored after testing.

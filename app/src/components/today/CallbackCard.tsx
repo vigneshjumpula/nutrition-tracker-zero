@@ -22,11 +22,11 @@ export function CallbackCard({ clock, inWords, onCancel }: { clock: string; inWo
   const styles = useStyles();
   return (
     <Card padding="none" testID="callback-card">
-      <View style={styles.row} accessible accessibilityLabel={`${fill(t.title, { clock })}. ${fill(t.subtitle, { inWords })}`}>
+      <View style={styles.row}>
         <View style={styles.tile}>
           <Icon as={PhoneForwarded} size="md" tone="primary" />
         </View>
-        <View style={styles.body}>
+        <View style={styles.body} accessible accessibilityLabel={`${fill(t.title, { clock })}. ${fill(t.subtitle, { inWords })}`}>
           <Text variant="bodyStrong">{fill(t.title, { clock: clock.toUpperCase() })}</Text>
           <Text variant="small" tone="muted" numberOfLines={2}>
             {fill(t.subtitle, { inWords })}

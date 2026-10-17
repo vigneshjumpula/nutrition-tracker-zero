@@ -62,6 +62,29 @@ For an embedded app, change the centralized `ON_DEVICE_VOICE_PROVIDER` to `vapi`
 - Meal read-back, confirmation, quantities, units, meal labels, already-logged meals, unusually-large-amount checks, correction replacement and the existing food/nutrition matching pipeline are retained. Neither provider is asked to invent nutrient values or expose health-profile information.
 - A dropped connection ends the session and preserves saved meals. There is no automatic reconnection that could replay confirmed saves into a new session. Failed final reports are surfaced; the existing stale-call cleanup remains a last resort.
 
+## Call-back requests
+
+Both providers offer `schedule_callback` from `worker/src/domain/callback.ts`. Give exactly one argument:
+`{"minutes":20}` for a delay of 1–720 whole minutes, or `{"time":"21:00"}` for a clock time in the profile's IANA time zone.
+The shared resolver handles daylight-saving transitions and rejects invalid or out-of-window requests. The phone validates the
+arguments and arms the native `call-later` one-shot before confirming success to the voice model. A failed permission check,
+disabled notifications or failed native scheduling returns failure feedback rather than promising a call.
+
+Deepgram routes the function through the common app hook and returns its result using `FunctionCallResponse`. Vapi observes the
+SDK's tool messages; server-side webhook handling alone cannot arm a phone and must not promise delivery. Successful feedback
+asks the model to confirm the time, say goodbye and end the current call. Meal saving remains a separate confirmed operation.
+
+The callback is held locally in AsyncStorage and native scheduling, not in D1. Another request replaces it. Today shows its time
+and a Cancel action; Reminder health lists it separately. App relaunch/resume restores a future callback if needed, and callbacks
+for another profile are removed. Turning daily calls from on to off or signing out cancels it; a callback explicitly requested
+while daily calls were already off remains scheduled. If native cancellation fails, the card stays visible and the app explains
+the failure so cancellation can be retried.
+
+Android rings through the exact-alarm/native service path; denied exact-alarm permission can delay delivery. iOS plays a local
+sound notification, and tapping starts the call with kind `retry`. It cannot start a microphone call while terminated. Both
+platforms require rebuilt native binaries. No migration or paid push service is required. See
+[the callback device checklist](REMINDER_DELIVERY.md#requested-call-backs-call-later) for checks still requiring devices.
+
 ## Extending the registry
 
 Implement the backend `VoiceProvider` contract (`id`, `configured`, `prepare`, optional `credentials` and `connect`), then register it in `worker/src/voice/registry.ts`. Implement the frontend `VoiceProvider.create`/`VoiceSession` contract (`start`, `stop`, `setMuted`, `setAudioRoute`, `dispose`) and register its lazy factory in `app/src/services/voice/registry.ts`. Translate provider events into `VoiceCallbacks`, including function results and call completion. Use `lifecycle: 'client'` for the shared persistence endpoints, or `'provider'` when an adapter owns the complete legacy lifecycle. Select its ID through configuration. The screens and nutrition business logic remain unchanged.

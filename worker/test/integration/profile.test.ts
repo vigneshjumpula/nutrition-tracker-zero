@@ -324,7 +324,8 @@ describe('GET /me/targets', () => {
     const res = await api('GET', '/me/targets', { userId, secret });
     expect(res.body).toMatchObject({ numbersHidden: true, targets: [], sources: {} });
     expect(res.body.targetSet.energy).toBeUndefined();
-    expect(res.text).not.toMatch(/2150|1910|2390|"value"/);
+    // Match numeric JSON values, not coincidental digits inside a random target-set UUID.
+    expect(res.text).not.toMatch(/:\s*(?:2150|1910|2390)(?=\s*[,}\]])|"value"\s*:/);
     const goals = await api('GET', '/me/goals', { userId, secret });
     expect(goals.body.hidden).toBe(true);
     expect(goals.body.goals.every((g: any) => g.target === null)).toBe(true);
@@ -457,7 +458,7 @@ describe('goals: recommended and typed side by side, inside their bounds (plan 6
     const res = await api('GET', '/me/goals', { userId });
     const by = Object.fromEntries(res.body.goals.map((g: any) => [g.key, g]));
     expect(by.calories).toMatchObject({ target: 2000, origin: 'reference', recommended: null, custom: false });
-    expect(res.text).not.toMatch(/2150/);
+    expect(res.text).not.toMatch(/:\s*2150(?=\s*[,}\]])/);
     const day = await api('GET', '/days/2026-10-05', { userId });
     expect(day.body.goals.calories).toBe(2000);
   });

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { ChevronDown, Minus, Plus, X } from 'lucide-react-native';
 import type { Meal } from '@/api/types';
 import { Badge, Icon, IconButton, Text } from '@/components/kit';
 import { usePressed } from '@/components/kit/usePressed';
+import { KeyboardInput } from '@/components/kit/KeyboardInput';
 import { fill } from '@/i18n/fill';
 import { strings } from '@/i18n/strings';
 import { createStyles, fontFor, radius, space, useTheme } from '@/theme';
@@ -125,7 +126,7 @@ export function LogRow({
             disabled={atLeast}
             onPress={() => onQuantity(stepQuantity(row.quantity, row.unit, -1))}
           />
-          <TextInput
+          <KeyboardInput
             testID={`qty-${row.id}`}
             value={row.quantity}
             onChangeText={onQuantity}

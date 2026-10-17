@@ -10,7 +10,7 @@ import { loadCachedSchedule, saveCachedSchedule } from './scheduleStore';
  */
 export async function applySchedule(settings: Pick<Settings, 'callTime' | 'callEnabled' | 'timezone'>): Promise<void> {
   const before = await loadCachedSchedule();
-  await saveCachedSchedule({ callTime: settings.callTime, callEnabled: settings.callEnabled, timezone: settings.timezone });
   if (before?.callEnabled && !settings.callEnabled) await cancelCallback();
+  await saveCachedSchedule({ callTime: settings.callTime, callEnabled: settings.callEnabled, timezone: settings.timezone });
   await reconcile('save', { signedIn: true });
 }

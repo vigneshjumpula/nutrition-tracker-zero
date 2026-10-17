@@ -11,7 +11,7 @@ import { cancelNativeScheduledCall, readNativeReminderDiagnostics, scheduleNativ
 import { readRingPayload, nativePayloadJson } from '@/services/calls/payload';
 import { reconcile } from '@/services/calls/reconcile';
 import { applySchedule } from '@/services/calls/schedule';
-import { saveCachedSchedule } from '@/services/calls/scheduleStore';
+import { loadCachedSchedule, saveCachedSchedule } from '@/services/calls/scheduleStore';
 
 jest.mock('@/services/calls/native', () => ({
   scheduleNativeCall: jest.fn(async (options: { fireAt: number }) => options.fireAt),
@@ -95,6 +95,14 @@ describe('scheduleCallback', () => {
     expect(schedule).toHaveBeenCalledTimes(1);
   });
 
+  it('does not promise a call when notification permissions cannot be checked', async () => {
+    n.getNotificationSettings.mockRejectedValueOnce(new Error('Permission bridge unavailable'));
+    const result = await scheduleCallback({ minutes: 20 }, { timeZone: ZONE, now: NOW });
+    expect(result).toEqual({ ok: false, error: expect.stringContaining('could not check notification permissions') });
+    expect(schedule).not.toHaveBeenCalled();
+    expect(await loadPendingCallback()).toBeNull();
+  });
+
   it('reports a failure to arm without remembering a call that will not come', async () => {
     schedule.mockRejectedValueOnce(new Error('Could not schedule the food reminder'));
     const result = await scheduleCallback({ minutes: 20 }, { timeZone: ZONE, now: NOW });
@@ -124,6 +132,15 @@ describe('scheduleCallback', () => {
 });
 
 describe('cancelCallback', () => {
+  it('keeps the record and allows retry if the native alarm could not be cancelled', async () => {
+    await scheduleCallback({ minutes: 20 }, { timeZone: ZONE, now: NOW });
+    cancelNative.mockRejectedValueOnce(new Error('Native cancellation failed'));
+    await expect(cancelCallback()).rejects.toThrow('Native cancellation failed');
+    expect(await loadPendingCallback()).not.toBeNull();
+    await cancelCallback();
+    expect(await loadPendingCallback()).toBeNull();
+  });
+
   it('takes back the alarm and the record, and is safe when there is none', async () => {
     await scheduleCallback({ minutes: 20 }, { timeZone: ZONE, now: NOW });
     await cancelCallback();
@@ -190,6 +207,19 @@ describe('syncCallback: the OS and the record kept in step', () => {
 
 describe('reconcile and the daily switch', () => {
   const record = { fireAt: NOW + 20 * 60_000, requestedAt: NOW, minutes: 20, profileId: 'u1' };
+
+  it('retries cancellation when turning daily calls off failed the first time', async () => {
+    await saveCachedSchedule({ callTime: '20:00', callEnabled: true, timezone: ZONE });
+    await savePendingCallback(record);
+    cancelNative.mockRejectedValueOnce(new Error('Native cancellation failed'));
+    const settings = { callTime: '20:00', callEnabled: false, timezone: ZONE };
+    await expect(applySchedule(settings)).rejects.toThrow('Native cancellation failed');
+    expect((await loadCachedSchedule())?.callEnabled).toBe(true);
+    expect(await loadPendingCallback()).toEqual(record);
+    await applySchedule(settings);
+    expect(await loadPendingCallback()).toBeNull();
+    expect((await loadCachedSchedule())?.callEnabled).toBe(false);
+  });
 
   it('is part of every start-up and resume pass, and the report says when it is due', async () => {
     await saveCachedSchedule({ callTime: '20:00', callEnabled: true, timezone: ZONE });

@@ -1,5 +1,74 @@
 # Remaining work: iOS QA and the five requested changes (session of 2026-10-17)
 
+## Cloud follow-up status — 17 October 2026
+
+This section supersedes the original handoff below. Feature code is implemented and the documentation/review follow-up is done.
+The release is **not fully validated or deployed**: the current cloud machine is Linux, without Xcode/iOS simulators, and
+`wrangler whoami` reports no Cloudflare authentication. No production deployment, remote migration or paid resource was created.
+
+| Work | Current outcome |
+|---|---|
+| Systematic iOS QA / native callback rebuild | Blocked by missing macOS/Xcode. Added numeric-keyboard Done controls, scalable field heights and a separate accessible callback Cancel action; simulator/hardware checks remain open. |
+| Voice callback | Implemented. Fixed false success after a permission-check failure, lost Cancel controls after native cancellation failure, and retrying cancellation when daily calls are disabled. Regression tests cover each case. |
+| Nutrient breakdown | Implemented. Automated Report navigation checks now cover day/week/month/year/custom periods and hidden numbers; existing tests cover grouping, edits, deletion, missing values and vitamin four-week links. Device Report QA remains open. |
+| Day completion switch | Implemented and tested off; stored marks are preserved and ignored until the switch is restored. Automatic weekly data-quality exclusions remain unchanged. |
+| My / Global pending | Implemented and tested; personal badge and newest-first personal list retained. |
+| Documentation | README API table and feature switches, voice callback contract, native `call-later` behavior, device checklists, iOS audit and PLAN updated. |
+| Fresh review | Completed a source/diff review; fixed the callback failure cases above and made the low-pressure privacy test match numeric JSON values rather than random UUID digits. |
+
+Validation in this cloud machine:
+
+- Worker: **53 suites / 839 tests passed**; TypeScript passed.
+- App: **67 suites / 1,046 tests passed**; TypeScript passed; ESLint has no errors and four existing warnings.
+- Local HTTP personal-settings check passed registration, login, target updates, persisted edits and disposable-account cleanup.
+- Separate local HTTP feature checks passed breakdown/range agreement with unknown contributions, personal/global pending counts,
+  and 409 `day_marking_off` on both status writes and clears. Disposable accounts were deleted. The updated Android JavaScript
+  bundle was served successfully by Metro. Callback accessibility regression checks passed after the final UI change.
+- Android SDK 36, NDK 27.1, CMake, Java 17 and Gradle 9 were installed. The isolated x86_64 Debug + AndroidTest build reached
+  `:app:checkDebugAarMetadata` but could not fetch `react-android-0.83.1-debug.aar`: Maven redirects to `repo.reactnative.dev`,
+  denied by the running network policy (HTTP 403). No APK or instrumentation run was produced. An isolated emulator was started,
+  but that is not a callback-delivery test. iOS rebuild and device QA have not been executed here.
+- The **four existing Kotlin time/DST tests passed** in a standalone JVM runner compiling the repository's actual
+  `DailyCallTime.kt` and `DailyCallTimeTest.kt`. This validates time calculation only; it does not replace the blocked app build
+  or Android instrumentation. The runner is at `/tmp/ntz-native-jvm` in this instance.
+- Saved **only** the necessary `repo.reactnative.dev` custom network addition to the environment draft; existing package-manager
+  presets and install/start instructions were preserved. Saving the draft did not apply the rule: a subsequent HTTPS request was
+  still denied. Save the network edit in environment settings before retrying the Android build; publish after review to retain it.
+
+### Release checks still requiring outside access
+
+1. Apply the saved environment network addition for `repo.reactnative.dev`. Retry the isolated Android Debug + AndroidTest builds
+   and run `later`, `later-habit`, `later-replace`, `later-cancel` and reboot tests. Until then Android native callback checks remain
+   blocked, rather than passed. The installed SDK and dependency caches can be reused.
+2. On macOS, rebuild the signed iOS simulator target and run the callback lifecycle checklist in
+   [REMINDER_DELIVERY.md](docs/REMINDER_DELIVERY.md#requested-call-backs-call-later). Complete the manual UI matrix in
+   [IOS_FLOW_QA.md](docs/IOS_FLOW_QA.md#cloud-follow-up--17-october-2026), including software keyboards, layouts, Report paths and share/export.
+3. On physical Android/iOS phones, verify notification sound, lock-screen delivery, audio routing and OEM battery restrictions.
+   Emulator tests cannot establish physical-phone behavior. The user's Pixel_9_test AVD and production profiles were not touched.
+4. Authenticate the intended Cloudflare account securely, then deploy the reviewed Worker with the user's approval on the free
+   plan. No new migration is needed for these features. Rebuild/install both native apps, and smoke-test the deployed routes.
+
+Android build retry in this prepared instance (the network change must apply first):
+
+```sh
+export ANDROID_HOME=/workspace/android-sdk
+export ANDROID_USER_HOME=/workspace/.android
+export GRADLE_USER_HOME=/workspace/.gradle
+export JAVA_HOME=/workspace/tools/jdk-17.0.16+8
+cd /workspace/nutrition-tracker-zero/app/android
+/workspace/tools/gradle-9.0.0/bin/gradle :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest \
+  -PreminderTestApp -PreactNativeArchitectures=x86_64 --max-workers=2 --console=plain
+```
+
+The external Gradle user properties already configure the cloud proxy and system Java CA store; TLS verification remains enabled.
+Use an x86_64 emulator for this APK, or build `arm64-v8a` for an ARM device. The cloud has no `/dev/kvm`; software emulation was
+slow, and the isolated emulator was stopped when the binary download prevented further device checks.
+
+No credentials should be pasted into chat or committed. The original instructions below retain the build commands and device
+scenarios; their completion claims describe the earlier session, not new verification.
+
+## Original handoff (historical)
+
 Written when the session's tokens ran out. The older [REMAINING_WORK.md](REMAINING_WORK.md) is untouched. Pick this up by reading
 "Resume here" first.
 

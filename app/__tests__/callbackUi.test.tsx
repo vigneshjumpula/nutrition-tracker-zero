@@ -4,6 +4,7 @@
  */
 import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from 'react-native';
 import TestRenderer, { act, type ReactTestInstance } from 'react-test-renderer';
 
 jest.mock('@react-navigation/native', () => {
@@ -37,6 +38,7 @@ import { useVoiceCall } from '@/hooks/useVoiceCall';
 import TodayScreen from '@/screens/TodayScreen';
 import VoiceCallScreen from '@/screens/VoiceCallScreen';
 import { savePendingCallback, loadPendingCallback } from '@/services/calls/callbackStore';
+import { cancelNativeScheduledCall } from '@/services/calls/native';
 import { useHealth } from '@/state/HealthContext';
 import { useMeta } from '@/state/MetaContext';
 import { ThemeProvider } from '@/theme';
@@ -86,6 +88,10 @@ describe('Today: the call back that is waiting', () => {
     expect(text).toMatch(/Call back at \d{1,2}:\d{2} (AM|PM)/);
     expect(text).toContain('In 20 minutes, as you asked.');
     expect(text.indexOf('Call back at')).toBeLessThan(text.indexOf('Daily check-in call'));
+    // VoiceOver must be able to reach Cancel separately from the time announcement.
+    const announcement = tree.root.findAll(n => n.props.accessible && n.props.accessibilityLabel?.startsWith('Call back at'))[0];
+    expect(announcement).toBeDefined();
+    expect(announcement.findAll(n => n.props.testID === 'callback-cancel')).toHaveLength(0);
   });
 
   it('is not there when no call back was asked for, or it is already over', async () => {
@@ -103,6 +109,24 @@ describe('Today: the call back that is waiting', () => {
     });
     expect(byId(tree, 'callback-card')).toHaveLength(0);
     expect(await loadPendingCallback()).toBeNull();
+  });
+
+  it('keeps the card and explains a failed cancellation, then allows another attempt', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const cancelNative = jest.spyOn(require('@/services/calls/native'), 'cancelNativeScheduledCall');
+    cancelNative.mockRejectedValueOnce(new Error('Alarm bridge unavailable'));
+    await savePendingCallback({ fireAt: Date.now() + 20 * 60_000, requestedAt: Date.now(), minutes: 20, profileId: 'u1' });
+    const tree = await render(<TodayScreen />);
+    const cancel = byId(tree, 'callback-cancel').find(n => typeof n.props.onPress === 'function')!;
+    await act(async () => { await cancel.props.onPress(); });
+    expect(alert).toHaveBeenCalledWith('Could not cancel call back', 'Alarm bridge unavailable');
+    expect(byId(tree, 'callback-card').length).toBeGreaterThan(0);
+    expect(await loadPendingCallback()).not.toBeNull();
+    await act(async () => { await cancel.props.onPress(); });
+    expect(byId(tree, 'callback-card')).toHaveLength(0);
+    expect(cancelNativeScheduledCall).toHaveBeenCalled();
+    cancelNative.mockRestore();
+    alert.mockRestore();
   });
 
   it('tells the person, where they set the daily call, that a call back can be asked for during a call', async () => {

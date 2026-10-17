@@ -58,6 +58,36 @@ Android **Force stop**, uninstalling, disabling notifications, a powered-off dev
 app-killing policies can prevent delivery. Force stop differs from swiping out of Recents; open the
 app again to restore alarms after a force stop. No server scheduler can bypass these OS controls.
 
+## Requested call backs (`call-later`)
+
+`call-daily` is the repeating daily reminder, `call-test` is the five-second diagnostic, and `call-later` is the one-shot explicitly
+requested during a voice call. `call-later` carries `callKind: retry` and `reason: callback`. Asking twice replaces the existing
+one-shot without modifying the daily schedule. The app retains its profile, requested time and due time for the Today card and
+reconciliation. Sign-out removes it; switching daily calls from on to off removes it as well. An explicit request made while
+daily calls were already off remains valid. Cancellation failures keep the card and allow retry.
+
+On Android the alarm and payload survive process death in SharedPreferences and are restored by native boot/update receivers.
+On iOS the `native-call-later` notification uses an absolute UTC calendar date, a default sound and callback-specific text.
+Reconciliation preserves an unchanged pending notification's revision so opening the app does not invalidate a subsequent tap.
+The notification delegate passes an accepted tap to the durable incoming-call bootstrap before JavaScript starts.
+
+Build the isolated `.remindertest` APKs using the commands below. Start each scenario from a clean test schedule (`scenario cancel`),
+then run `later`, `later-habit`, `later-replace` and `later-cancel` in separate runs. The first three report `scheduledAt` about ten
+seconds ahead; kill the process with `am kill` before that epoch, then verify the native service receives `call-later` once with
+kind `retry`. `later-replace` must leave only the replacement alarm; `later-cancel` must leave none and never ring. The habit
+scenario tests generic native payload forwarding; it does not add habit UI to this app. Also schedule a callback and reboot
+before its due time, checking one delivery and no daily repeat. Never use the normal app's profile or preferences for these tests.
+
+iOS device/simulator checklist after a signed Debug rebuild:
+
+- Schedule a callback 60–90 seconds ahead, terminate the app, verify the sound notification, tap and confirm the `retry` call screen.
+- Ask twice and verify only the replacement fires. Cancel on Today and verify no notification. Relaunch and verify the pending card.
+- Reboot with a future callback; check the OS retains the pending notification. Disable daily calls, then separately sign out,
+  and verify cancellation. Request one while daily calls were already off and verify it remains scheduled.
+- On a physical phone check lock screen, Focus/silent-mode behavior and microphone/audio routing; simulator results do not cover them.
+
+These are release checks, not claims of execution. See [the current remaining-work status](../REMAINING_WORK_2026-10-17.md).
+
 ## Verification
 
 Verified during this change: all 892 app tests, TypeScript, ESLint, four native Android time/DST

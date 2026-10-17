@@ -4,6 +4,7 @@ import { Search, X, type LucideIcon } from 'lucide-react-native';
 import { createStyles, fontFor, radius, space, useTheme } from '@/theme';
 import { Icon } from './Icon';
 import { Text } from './Text';
+import { KeyboardInput } from './KeyboardInput';
 
 type PassThrough = Pick<
   TextInputProps,
@@ -30,7 +31,7 @@ const useStyles = createStyles(({ colors }) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
-    height: 48,
+    minHeight: 48,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
     borderColor: colors.inputBorder,
@@ -53,7 +54,7 @@ const useStyles = createStyles(({ colors }) => ({
   },
   inlineBox: {
     width: 104,
-    height: 40,
+    minHeight: 40,
     borderRadius: radius.sm + 2,
     backgroundColor: colors.surfaceMuted,
     paddingHorizontal: space.md,
@@ -130,7 +131,7 @@ export function Field({
         ]}
       >
         {icon ? <Icon as={icon} size="md" tone="muted" /> : null}
-        <TextInput
+        <KeyboardInput
           testID={testID}
           value={value}
           onChangeText={onChangeText}
@@ -214,7 +215,7 @@ export function InlineField({
             { borderWidth: error || focused ? 1.5 : 0, borderColor: error ? colors.danger : colors.primary },
           ]}
         >
-          <TextInput
+          <KeyboardInput
             testID={testID}
             value={value}
             onChangeText={onChangeText}

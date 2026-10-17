@@ -40,6 +40,7 @@ export async function scheduleCallback(
     snapshot = await readPermissionSnapshot();
   } catch (e) {
     reminderLog.warn('callback.permission_check_failed', String(e));
+    return { ok: false, error: 'I could not check notification permissions on this phone. Tell them the call back was not set and to try again. The regular daily call is unchanged.' };
   }
   if (snapshot && !snapshot.notificationsAuthorized) {
     reminderLog.warn('callback.notifications_off', 'A call back was asked for with notifications off');
@@ -70,8 +71,9 @@ export async function scheduleCallback(
 
 /** Drops the call back: the alarm and the record. Safe when there is none. */
 export async function cancelCallback(): Promise<void> {
-  await cancelRing(CALLBACK_TRIGGER_ID).catch(e => reminderLog.warn('callback.cancel_failed', String(e)));
-  await savePendingCallback(null).catch(() => {});
+  // Keep the record if native cancellation fails: otherwise the alarm still rings with no way to cancel it.
+  await cancelRing(CALLBACK_TRIGGER_ID);
+  await savePendingCallback(null);
 }
 
 /**

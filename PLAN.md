@@ -451,7 +451,7 @@ Ported from the old app where it helps: theme tokens, Gluestack/NativeWind setup
 | Manual add/edit/delete, meal grouping, date navigation, goals, macros card | **Keep** (goals per user instead of hard-coded) |
 | Weekly nutrition summary | **Keep, simplified** (no LLM) |
 | Habits (list, create, toggle, push-type local reminders) | **Defer** to optional Phase 7. Free, but not in the spec's screens. |
-| "Call me back in N minutes" said during a call | **Defer**. Possible later as a second Vapi tool, still no LLM on our side. |
+| "Call me back in N minutes" said during a call | **Built**: shared `schedule_callback` tool for Deepgram/Vapi, local `call-later` one-shot, Today cancellation and native recovery. See `docs/REMINDER_DELIVERY.md`; device release checks remain listed in `REMAINING_WORK_2026-10-17.md`. |
 | Email/password accounts + JWT | **Skip** (replaced by profiles, per spec) |
 | Spoonacular / Groq / USDA nutrition, LLM transcript parsing and interpretation, AI RDI goals, AI insights | **Skip** (hard rules / out of scope) |
 | Habit voice check-ins | **Skip** (needed Groq to interpret) |
@@ -463,6 +463,11 @@ Ported from the old app where it helps: theme tokens, Gluestack/NativeWind setup
 ---
 
 ## 13. Phases (commit after each; app stays runnable)
+
+**2026-10-17 follow-up:** the previously deferred callback is implemented. The voice model supplies a delay or local clock time;
+the phone validates it and arms the native one-shot before acknowledging success. No server scheduler, new paid service or D1
+migration is needed. Rebuild both native apps and deploy the Worker to deliver the full change. The current release-validation
+status is tracked in `REMAINING_WORK_2026-10-17.md`, separately from the original phases below.
 
 **Inputs I'll need, none blocking Phase 1–2:**
 1. Before Phase 3, the old assistant's prompt / first message / voice / model / transcriber from the Vapi dashboard. Either paste them, or OK me fetching them read-only with `GET https://api.vapi.ai/assistant/{id}` using the key in the old `backend/.env` (never printed). Otherwise the §9.3 draft and sensible defaults are used.
